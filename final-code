@@ -1,0 +1,164 @@
+#import required libraries
+import numpy as np
+import pandas as pd
+import matplotlib as mp
+from sklearn import svm
+
+
+#load the dataset
+d=pd.read_csv('Arduino_20180118_130230.csv')
+d
+
+
+#a breif describtio
+d.describe()
+
+
+#convert the dataset into DataFrame
+df=pd.DataFrame(d)
+df
+
+
+#standard deviation
+print(df.std())
+
+
+#removing/droping the not useful features(columns) from the dataframe
+df.drop(['Time UTC (YYYYMMDD_HHMMSS.mmm)','Time Arduino (Micros since start)','SeatBack2','SeatBack1','SeatBack3','SeatBack4','SeatBack5','SeatBack6'], axis = 1, inplace = True)
+df.head()
+
+
+x=df[(df['Seat6']<=10)|(df['Seat5']<=10)|(df['Seat4']<=10)|(df['Seat3']<=10)|(df['Seat2']<=10)|(df['Seat1']<=10)].index
+df.drop(x,inplace=True)
+
+
+df
+
+df.mode()
+
+df.describe()
+
+
+#creating a percentage columns
+df['percent6']=((df['Seat6']-df['Seat6'].min()) / 
+               (df['Seat6'].max()-df['Seat6'].min()))*100
+df['percent5']=((df['Seat5']-df['Seat5'].min()) / 
+               (df['Seat5'].max()-df['Seat5'].min()))*100
+df['percent4']=((df['Seat4']-df['Seat4'].min()) / 
+               (df['Seat4'].max()-df['Seat4'].min()))*100
+df['percent3']=((df['Seat3']-df['Seat3'].min()) / 
+               (df['Seat3'].max()-df['Seat3'].min()))*100
+df['percent2']=((df['Seat2']-df['Seat2'].min()) / 
+               (df['Seat2'].max()-df['Seat2'].min()))*100
+df['percent1']=((df['Seat1']-df['Seat1'].min()) / 
+               (df['Seat1'].max()-df['Seat1'].min()))*100
+df
+
+
+#a breif describtion
+df.describe()
+
+
+#applying the condition and labeling the data
+#creating a target column 'position'
+conditions =[(df['percent6']>=75)&(df['percent3']>=75),
+            #(df[(df['percent6'] >= 30 & df['percent6'] <= 59) and (df['percent5'] >= 30 & df['percent5'] <= 59) and (df['percent4'] >= 30 & df['percent4'] <= 59) and (df['percent3'] >= 30 & df['percent3'] <= 59) and (df['percent2'] >= 30 & df['percent2'] <= 59) and (df['percent1'] >= 30 & df['percent1'] <= 59)])
+            (df['percent6']>=45)&(df['percent5']>=45)&(df['percent4'] >=45)&(df['percent3']>=45)&(df['percent2'] >=45)&(df['percent1']>=45),
+            (df['percent1']>=60)&(df['percent4']>=60)
+            ]
+positions = ['left','normal','right']
+df['posture']= np.select(conditions,positions)
+df
+
+
+#count the number of labeled data
+df.posture.value_counts()
+
+
+df.shape
+
+#replacing the 0 value with NAN
+df['posture'].replace('0',np.nan,inplace=True)
+df
+
+
+#removing the NAN value in the dataframe
+df=df.dropna()
+df
+
+
+#finding the shape of the dataframe
+df.shape
+
+
+#the count of the labeled data
+df.posture.value_counts()
+
+
+#remove the astrick to get an output csv file in the below code
+#df.to_csv('withbackseat_output_noLE.csv',index=False)
+
+
+#applying labelencoder
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+le
+
+
+X_3=df.iloc[:,12].values
+X_3
+
+
+df['posture'] = le.fit_transform(X_3)
+df
+
+#df.to_csv('output.csv',index=True)
+
+df.posture.value_counts()
+
+y=df['posture']
+X=df.iloc[:,:12]
+
+df.posture.head()
+
+from sklearn.model_selection import train_test_split 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)  
+
+X_train.shape
+
+X_train.head()
+
+X_test.shape
+
+X_test.head()
+
+y_train.shape
+
+y_train.head()
+
+y_test.shape
+
+y_test.head()
+
+from sklearn.metrics import accuracy_score
+clf = svm.SVC(kernel='linear')
+clf.fit(X_train,y_train)
+y_pred = clf.predict(X_test)
+print(accuracy_score(y_test,y_pred)*100)
+
+
+from sklearn.model_selection import cross_val_score
+clf = svm.SVC(kernel='linear', C=1, random_state=42)
+scores = cross_val_score(clf, X, y, cv=5)*100
+scores
+
+np.mean(scores)
+
+#from sklearn.model_selection import cross_val_score
+#results=cross_val_score(clf,X,y,cv=kfold_validation)
+#print(results*100)
+
+#from sklearn.model_selection import KFold
+#kfold_validation=KFold(10)
+
+#print(np.mean(results))
